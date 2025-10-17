@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoRoute - Smart Transport Recommendations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%); }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .achievement-glow { animation: glow 2s ease-in-out infinite alternate; }
+        @keyframes glow {
+            from { box-shadow: 0 0 5px #10B981; }
+            to { box-shadow: 0 0 20px #10B981; }
+        }
+        .route-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .route-card:hover { transform: translateY(-2px); }
+        .badge-earned { animation: bounce 0.5s ease-in-out; }
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+            40%, 43% { transform: translateY(-8px); }
+            70% { transform: translateY(-4px); }
+            90% { transform: translateY(-2px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading" class="fixed inset-0 gradient-bg flex items-center justify-center z-50">
+            <div class="text-center text-white">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+                <h2 class="text-2xl font-semibold">Loading EcoRoute...</h2>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div id="main-app" class="hidden">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <h1 class="text-2xl font-bold text-gray-800">EcoRoute</h1>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600">Points</p>
+                                <p id="header-points" class="text-lg font-bold text-green-600">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Navigation -->
+            <nav class="bg-white border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex space-x-8">
+                        <button class="nav-btn active py-4 px-1 border-b-2 border-green-500 font-medium text-green-600" data-tab="routes">
+                            Routes
+                        </button>
+                        <button class="nav-btn py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="dashboard">
+                            Dashboard
+                        </button>
+                        <button class="nav-btn py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="leaderboard">
+                            Leaderboard
+                        </button>
+                        <button class="nav-btn py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="badges">
+                            Badges
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Routes Tab -->
+                <div id="routes-tab" class="tab-content">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Plan Your Journey</h2>
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">From</label>
+                                    <input type="text" id="from-location" placeholder="Enter starting location" 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">To</label>
+                                    <input type="text" id="to-location" placeholder="Enter destination" 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                                </div>
+                            </div>
+                            <button id="find-routes" class="w-full md:w-auto bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors">
+                                Find Eco Routes
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Route Recommendations -->
+                    <div id="route-recommendations" class="hidden">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Recommended Routes</h3>
+                        <div id="routes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="tab-content hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Total Distance</p>
+                                    <p id="total-distance" class="text-2xl font-bold text-gray-900">0 km</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">CO₂ Saved</p>
+                                    <p id="total-carbon" class="text-2xl font-bold text-gray-900">0 kg</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Total Points</p>
+                                    <p id="total-points-dash" class="text-2xl font-bold text-gray-900">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-500">Calories Burned</p>
+                                    <p id="total-calories" class="text-2xl font-bold text-gray-900">0 cal</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Journey History -->
+                    <div class="bg-white rounded-lg p-6 card-shadow mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Journeys</h3>
+                        <div id="journey-history" class="space-y-3">
+                            <p class="text-gray-500 text-center py-8">No journeys yet. Start planning your first eco-friendly route!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leaderboard Tab -->
+                <div id="leaderboard-tab" class="tab-content hidden">
+                    <div class="bg-white rounded-lg p-6 card-shadow">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">Community Leaderboard</h2>
+                        <div id="leaderboard-list" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- Badges Tab -->
+                <div id="badges-tab" class="tab-content hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Available Badges</h3>
+                            <div id="available-badges" class="space-y-3"></div>
+                        </div>
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Earned Badges</h3>
+                            <div id="earned-badges" class="space-y-3"></div>
+                        </div>
+                        <div class="bg-white rounded-lg p-6 card-shadow">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Progress</h3>
+                            <div id="badge-progress" class="space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Achievement Notification -->
+        <div id="achievement-notification" class="hidden fixed top-4 right-4 bg-white rounded-lg p-4 card-shadow achievement-glow z-40">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800">Achievement Unlocked!</p>
+                    <p id="achievement-text" class="text-sm text-gray-600"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        let userStats = {
+            totalDistance: 0,
+            totalCarbon: 0,
+            totalPoints: 0,
+            totalCalories: 0,
+            journeys: [],
+            earnedBadges: []
+        };
+
+        // Badge System
+        const badges = [
+            { id: 'first-walk', name: 'First Steps', description: 'Complete your first walking journey', icon: '🚶', requirement: 'walk', threshold: 1, points: 50 },
+            { id: 'first-cycle', name: 'Cyclist', description: 'Complete your first cycling journey', icon: '🚲', requirement: 'cycle', threshold: 1, points: 50 },
+            { id: 'first-transit', name: 'Transit User', description: 'Use public transport for the first time', icon: '🚌', requirement: 'transit', threshold: 1, points: 50 },
+            { id: 'first-carpool', name: 'Carpooler', description: 'Complete your first carpool journey', icon: '🚗', requirement: 'carpool', threshold: 1, points: 50 },
+            { id: 'distance-5km', name: '5km Club', description: 'Travel 5km in total', icon: '📍', requirement: 'distance', threshold: 5, points: 100 },
+            { id: 'distance-25km', name: 'Distance Warrior', description: 'Travel 25km in total', icon: '🏃', requirement: 'distance', threshold: 25, points: 250 },
+            { id: 'carbon-1kg', name: 'Carbon Saver', description: 'Save 1kg of CO₂', icon: '🌱', requirement: 'carbon', threshold: 1, points: 100 },
+            { id: 'carbon-10kg', name: 'Eco Hero', description: 'Save 10kg of CO₂', icon: '🌍', requirement: 'carbon', threshold: 10, points: 500 },
+            { id: 'points-500', name: 'Point Collector', description: 'Earn 500 points', icon: '⭐', requirement: 'points', threshold: 500, points: 100 },
+            { id: 'points-2000', name: 'Green Champion', description: 'Earn 2000 points', icon: '🏆', requirement: 'points', threshold: 2000, points: 300 }
+        ];
+
+        // Simulated AI Recommendation Engine
+        class EcoRouteAI {
+            constructor() {
+                this.weatherConditions = ['sunny', 'cloudy', 'light_rain', 'windy'];
+                this.trafficLevels = ['low', 'medium', 'high'];
+                this.transportModes = {
+                    walk: { name: 'Walking', icon: '🚶', carbonFactor: 0, caloriesFactor: 50, speedKmh: 5 },
+                    cycle: { name: 'Cycling', icon: '🚲', carbonFactor: 0, caloriesFactor: 30, speedKmh: 15 },
+                    transit: { name: 'Public Transport', icon: '🚌', carbonFactor: 0.05, caloriesFactor: 10, speedKmh: 25 },
+                    carpool: { name: 'Carpool', icon: '🚗', carbonFactor: 0.06, caloriesFactor: 5, speedKmh: 35 }
+                };
+            }
+
+            generateRoute(from, to) {
+                const distance = Math.random() * 15 + 2; // 2-17 km
+                const weather = this.weatherConditions[Math.floor(Math.random() * this.weatherConditions.length)];
+                const traffic = this.trafficLevels[Math.floor(Math.random() * this.trafficLevels.length)];
+
+                const routes = Object.keys(this.transportModes).map(mode => {
+                    const transport = this.transportModes[mode];
+                    const baseDuration = (distance / transport.speedKmh) * 60;
+                    const weatherMultiplier = this.getWeatherMultiplier(mode, weather);
+                    const trafficMultiplier = this.getTrafficMultiplier(mode, traffic);
+                    
+                    const duration = Math.round(baseDuration * weatherMultiplier * trafficMultiplier);
+                    const carbonSaved = this.calculateCarbonSaved(mode, distance);
+                    const calories = Math.round(distance * transport.caloriesFactor);
+                    const points = this.calculatePoints(mode, distance, carbonSaved);
+                    const ecoScore = this.calculateEcoScore(mode, carbonSaved, calories);
+
+                    return {
+                        mode,
+                        name: transport.name,
+                        icon: transport.icon,
+                        distance: distance.toFixed(1),
+                        duration,
+                        carbonSaved: carbonSaved.toFixed(2),
+                        calories,
+                        points,
+                        ecoScore,
+                        weather,
+                        traffic,
+                        recommendation: this.generateRecommendation(mode, weather, traffic, ecoScore)
+                    };
+                });
+
+                return routes.sort((a, b) => b.ecoScore - a.ecoScore);
+            }
+
+            getWeatherMultiplier(mode, weather) {
+                const multipliers = {
+                    walk: { sunny: 1, cloudy: 1.1, light_rain: 1.3, windy: 1.2 },
+                    cycle: { sunny: 1, cloudy: 1.1, light_rain: 1.4, windy: 1.3 },
+                    transit: { sunny: 1, cloudy: 1, light_rain: 1.1, windy: 1 },
+                    carpool: { sunny: 1, cloudy: 1, light_rain: 1.2, windy: 1.1 }
+                };
+                return multipliers[mode][weather] || 1;
+            }
+
+            getTrafficMultiplier(mode, traffic) {
+                const multipliers = {
+                    walk: { low: 1, medium: 1, high: 1 },
+                    cycle: { low: 1, medium: 1.1, high: 1.2 },
+                    transit: { low: 1, medium: 1.2, high: 1.4 },
+                    carpool: { low: 1, medium: 1.3, high: 1.6 }
+                };
+                return multipliers[mode][traffic] || 1;
+            }
+
+            calculateCarbonSaved(mode, distance) {
+                const carEmission = 0.21; // kg CO₂ per km for average car
+                const modeEmission = this.transportModes[mode].carbonFactor;
+                return (carEmission - modeEmission) * distance;
+            }
+
+            calculatePoints(mode, distance, carbonSaved) {
+                const basePoints = Math.round(distance * 10);
+                const carbonBonus = Math.round(carbonSaved * 20);
+                const modeMultiplier = { walk: 2, cycle: 1.8, transit: 1.2, carpool: 1 }[mode];
+                return Math.round((basePoints + carbonBonus) * modeMultiplier);
+            }
+
+            calculateEcoScore(mode, carbonSaved, calories) {
+                const carbonScore = carbonSaved * 40;
+                const healthScore = calories * 0.1;
+                const modeScore = { walk: 100, cycle: 90, transit: 70, carpool: 50 }[mode];
+                return Math.round(carbonScore + healthScore + modeScore);
+            }
+
+            generateRecommendation(mode, weather, traffic, ecoScore) {
+                const recommendations = {
+                    walk: {
+                        sunny: "Perfect weather for a healthy walk!",
+                        cloudy: "Great walking conditions with comfortable temperature.",
+                        light_rain: "Light rain - consider an umbrella for your walk.",
+                        windy: "Windy conditions, but still great for walking exercise."
+                    },
+                    cycle: {
+                        sunny: "Ideal cycling weather with clear skies!",
+                        cloudy: "Good cycling conditions with mild weather.",
+                        light_rain: "Light rain - be careful on wet roads.",
+                        windy: "Headwind might slow you down, but tailwind will help!"
+                    },
+                    transit: {
+                        sunny: "Comfortable journey with public transport.",
+                        cloudy: "Perfect weather for indoor transit.",
+                        light_rain: "Stay dry with public transport.",
+                        windy: "Avoid the wind with indoor transit options."
+                    },
+                    carpool: {
+                        sunny: "Share the ride and enjoy the weather together!",
+                        cloudy: "Great carpooling weather.",
+                        light_rain: "Stay comfortable sharing a ride.",
+                        windy: "Shelter from the wind with a shared journey."
+                    }
+                };
+
+                return recommendations[mode][weather] + (ecoScore > 80 ? " Highly recommended!" : "");
+            }
+        }
+
+        // Initialize AI Engine
+        const aiEngine = new EcoRouteAI();
+
+        // Application Logic
+        class EcoRouteApp {
+            constructor() {
+                this.setupEventListeners();
+                this.initializeApp();
+            }
+
+            setupEventListeners() {
+                // Navigation
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
+                });
+
+                // Route Planning
+                document.getElementById('find-routes').addEventListener('click', this.findRoutes.bind(this));
+
+                // Enter key support for inputs
+                document.getElementById('from-location').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.findRoutes();
+                });
+                document.getElementById('to-location').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.findRoutes();
+                });
+            }
+
+            initializeApp() {
+                // Load demo data from localStorage
+                const savedStats = localStorage.getItem('ecoroute-stats');
+                if (savedStats) {
+                    userStats = JSON.parse(savedStats);
+                }
+
+                this.showMainApp();
+                this.updateUI();
+                this.generateLeaderboard();
+                this.renderBadges();
+            }
+
+            showMainApp() {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+            }
+
+            switchTab(tabName) {
+                // Update navigation
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('active', 'border-green-500', 'text-green-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+
+                const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+                activeBtn.classList.add('active', 'border-green-500', 'text-green-600');
+                activeBtn.classList.remove('border-transparent', 'text-gray-500');
+
+                // Show/hide content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+            }
+
+            findRoutes() {
+                const from = document.getElementById('from-location').value.trim();
+                const to = document.getElementById('to-location').value.trim();
+
+                if (!from || !to) {
+                    alert('Please enter both starting location and destination.');
+                    return;
+                }
+
+                const routes = aiEngine.generateRoute(from, to);
+                this.displayRoutes(routes, from, to);
+            }
+
+            displayRoutes(routes, from, to) {
+                const container = document.getElementById('routes-container');
+                const recommendations = document.getElementById('route-recommendations');
+
+                container.innerHTML = '';
+                
+                routes.forEach((route, index) => {
+                    const routeCard = document.createElement('div');
+                    routeCard.className = 'route-card bg-white rounded-lg p-6 card-shadow cursor-pointer';
+                    
+                    const ecoScoreColor = route.ecoScore > 80 ? 'text-green-600' : route.ecoScore > 60 ? 'text-yellow-600' : 'text-orange-600';
+                    const recommendedBadge = index === 0 ? '<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium ml-2">Recommended</span>' : '';
+
+                    routeCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">${route.icon}</span>
+                                <h4 class="text-lg font-semibold text-gray-800">${route.name}</h4>
+                                ${recommendedBadge}
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500">Eco Score</p>
+                                <p class="text-xl font-bold ${ecoScoreColor}">${route.ecoScore}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Distance</p>
+                                <p class="font-semibold">${route.distance} km</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Duration</p>
+                                <p class="font-semibold">${route.duration} min</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">CO₂ Saved</p>
+                                <p class="font-semibold text-green-600">${route.carbonSaved} kg</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Points</p>
+                                <p class="font-semibold text-purple-600">${route.points}</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-500 mb-1">Calories Burned</p>
+                            <p class="font-semibold text-red-600">${route.calories} cal</p>
+                        </div>
+
+                        <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                            <p class="text-sm text-gray-700">${route.recommendation}</p>
+                        </div>
+
+                        <div class="flex justify-between text-xs text-gray-500 mb-4">
+                            <span>Weather: ${route.weather.replace('_', ' ')}</span>
+                            <span>Traffic: ${route.traffic}</span>
+                        </div>
+
+                        <button class="select-route w-full bg-green-500 text-white py-2 rounded-lg font-medium hover:bg-green-600 transition-colors" 
+                                data-route='${JSON.stringify(route)}' data-from="${from}" data-to="${to}">
+                            Select This Route
+                        </button>
+                    `;
+
+                    routeCard.querySelector('.select-route').addEventListener('click', (e) => {
+                        const routeData = JSON.parse(e.target.dataset.route);
+                        const fromLocation = e.target.dataset.from;
+                        const toLocation = e.target.dataset.to;
+                        this.selectRoute(routeData, fromLocation, toLocation);
+                    });
+
+                    container.appendChild(routeCard);
+                });
+
+                recommendations.classList.remove('hidden');
+            }
+
+            selectRoute(route, from, to) {
+                // Update user stats
+                userStats.totalDistance += parseFloat(route.distance);
+                userStats.totalCarbon += parseFloat(route.carbonSaved);
+                userStats.totalPoints += route.points;
+                userStats.totalCalories += route.calories;
+
+                // Add journey to history
+                const journey = {
+                    id: Date.now(),
+                    from,
+                    to,
+                    mode: route.mode,
+                    distance: route.distance,
+                    carbonSaved: route.carbonSaved,
+                    points: route.points,
+                    calories: route.calories,
+                    date: new Date().toLocaleDateString(),
+                    time: new Date().toLocaleTimeString()
+                };
+                userStats.journeys.unshift(journey);
+
+                // Keep only last 10 journeys
+                if (userStats.journeys.length > 10) {
+                    userStats.journeys = userStats.journeys.slice(0, 10);
+                }
+
+                // Check for new badges
+                this.checkBadges(route.mode);
+
+                // Save to localStorage
+                this.saveUserData();
+
+                // Update UI
+                this.updateUI();
+                this.updateJourneyHistory();
+
+                // Show success message
+                this.showAchievement(`Journey completed! +${route.points} points earned`);
+
+                // Clear form
+                document.getElementById('from-location').value = '';
+                document.getElementById('to-location').value = '';
+                document.getElementById('route-recommendations').classList.add('hidden');
+
+                // Switch to dashboard
+                this.switchTab('dashboard');
+            }
+
+            checkBadges(selectedMode) {
+                const newBadges = [];
+
+                badges.forEach(badge => {
+                    if (userStats.earnedBadges.includes(badge.id)) return;
+
+                    let earned = false;
+
+                    switch (badge.requirement) {
+                        case 'walk':
+                        case 'cycle':
+                        case 'transit':
+                        case 'carpool':
+                            const modeJourneys = userStats.journeys.filter(j => j.mode === badge.requirement);
+                            earned = modeJourneys.length >= badge.threshold;
+                            break;
+                        case 'distance':
+                            earned = userStats.totalDistance >= badge.threshold;
+                            break;
+                        case 'carbon':
+                            earned = userStats.totalCarbon >= badge.threshold;
+                            break;
+                        case 'points':
+                            earned = userStats.totalPoints >= badge.threshold;
+                            break;
+                    }
+
+                    if (earned) {
+                        userStats.earnedBadges.push(badge.id);
+                        userStats.totalPoints += badge.points;
+                        newBadges.push(badge);
+                    }
+                });
+
+                // Show badge notifications
+                newBadges.forEach((badge, index) => {
+                    setTimeout(() => {
+                        this.showAchievement(`Badge Earned: ${badge.name} (+${badge.points} points)`);
+                    }, (index + 1) * 1000);
+                });
+            }
+
+            showAchievement(message) {
+                const notification = document.getElementById('achievement-notification');
+                const text = document.getElementById('achievement-text');
+                
+                text.textContent = message;
+                notification.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 4000);
+            }
+
+            updateUI() {
+                document.getElementById('header-points').textContent = userStats.totalPoints;
+                document.getElementById('total-distance').textContent = `${userStats.totalDistance.toFixed(1)} km`;
+                document.getElementById('total-carbon').textContent = `${userStats.totalCarbon.toFixed(2)} kg`;
+                document.getElementById('total-points-dash').textContent = userStats.totalPoints;
+                document.getElementById('total-calories').textContent = `${userStats.totalCalories} cal`;
+            }
+
+            updateJourneyHistory() {
+                const container = document.getElementById('journey-history');
+                
+                if (userStats.journeys.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No journeys yet. Start planning your first eco-friendly route!</p>';
+                    return;
+                }
+
+                container.innerHTML = userStats.journeys.map(journey => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="text-xl mr-3">${aiEngine.transportModes[journey.mode].icon}</span>
+                            <div>
+                                <p class="font-medium text-gray-800">${journey.from} → ${journey.to}</p>
+                                <p class="text-sm text-gray-500">${journey.date} at ${journey.time}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500">${journey.distance} km • ${journey.carbonSaved} kg CO₂</p>
+                            <p class="font-semibold text-green-600">+${journey.points} points</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            generateLeaderboard() {
+                const leaderboardData = [
+                    { name: 'You', points: userStats.totalPoints, carbon: userStats.totalCarbon, isCurrentUser: true },
+                    { name: 'Alex Chen', points: 2847, carbon: 15.2, isCurrentUser: false },
+                    { name: 'Sarah Johnson', points: 2156, carbon: 12.8, isCurrentUser: false },
+                    { name: 'Mike Rodriguez', points: 1923, carbon: 11.4, isCurrentUser: false },
+                    { name: 'Emma Wilson', points: 1678, carbon: 9.7, isCurrentUser: false },
+                    { name: 'David Kim', points: 1445, carbon: 8.9, isCurrentUser: false },
+                    { name: 'Lisa Zhang', points: 1234, carbon: 7.6, isCurrentUser: false },
+                    { name: 'Tom Brown', points: 1089, carbon: 6.8, isCurrentUser: false }
+                ];
+
+                // Sort by points
+                leaderboardData.sort((a, b) => b.points - a.points);
+
+                const container = document.getElementById('leaderboard-list');
+                container.innerHTML = leaderboardData.map((user, index) => {
+                    const rankClass = index === 0 ? 'bg-yellow-50 border-yellow-200' : 
+                                     index === 1 ? 'bg-gray-50 border-gray-200' : 
+                                     index === 2 ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200';
+                    
+                    const userClass = user.isCurrentUser ? 'ring-2 ring-green-500' : '';
+                    
+                    return `
+                        <div class="flex items-center justify-between p-4 border rounded-lg ${rankClass} ${userClass}">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-4 font-bold text-gray-600">
+                                    ${index + 1}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800">${user.name}</p>
+                                    <p class="text-sm text-gray-500">${user.carbon.toFixed(1)} kg CO₂ saved</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-lg text-gray-800">${user.points}</p>
+                                <p class="text-sm text-gray-500">points</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            renderBadges() {
+                const availableContainer = document.getElementById('available-badges');
+                const earnedContainer = document.getElementById('earned-badges');
+                const progressContainer = document.getElementById('badge-progress');
+
+                // Available badges
+                const availableBadges = badges.filter(badge => !userStats.earnedBadges.includes(badge.id));
+                availableContainer.innerHTML = availableBadges.map(badge => `
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="text-2xl mr-3">${badge.icon}</span>
+                        <div>
+                            <p class="font-medium text-gray-800">${badge.name}</p>
+                            <p class="text-sm text-gray-500">${badge.description}</p>
+                            <p class="text-xs text-purple-600">+${badge.points} points</p>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Earned badges
+                const earnedBadges = badges.filter(badge => userStats.earnedBadges.includes(badge.id));
+                earnedContainer.innerHTML = earnedBadges.length > 0 ? earnedBadges.map(badge => `
+                    <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                        <span class="text-2xl mr-3">${badge.icon}</span>
+                        <div>
+                            <p class="font-medium text-gray-800">${badge.name}</p>
+                            <p class="text-sm text-gray-500">${badge.description}</p>
+                            <p class="text-xs text-green-600">Earned!</p>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-gray-500 text-center py-8">No badges earned yet. Complete journeys to unlock achievements!</p>';
+
+                // Progress tracking
+                const progressBadges = badges.filter(badge => !userStats.earnedBadges.includes(badge.id));
+                progressContainer.innerHTML = progressBadges.slice(0, 5).map(badge => {
+                    let current = 0;
+                    let total = badge.threshold;
+
+                    switch (badge.requirement) {
+                        case 'walk':
+                        case 'cycle':
+                        case 'transit':
+                        case 'carpool':
+                            current = userStats.journeys.filter(j => j.mode === badge.requirement).length;
+                            break;
+                        case 'distance':
+                            current = userStats.totalDistance;
+                            break;
+                        case 'carbon':
+                            current = userStats.totalCarbon;
+                            break;
+                        case 'points':
+                            current = userStats.totalPoints;
+                            break;
+                    }
+
+                    const percentage = Math.min((current / total) * 100, 100);
+
+                    return `
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-gray-700">${badge.name}</span>
+                                <span class="text-sm text-gray-500">${current.toFixed(1)}/${total}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            saveUserData() {
+                localStorage.setItem('ecoroute-stats', JSON.stringify(userStats));
+            }
+        }
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', () => {
+            new EcoRouteApp();
+        });
+    </script>
+</body>
+</html>
