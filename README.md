@@ -1,4 +1,4 @@
-# 🌿 Eco Move
+# 🌿 Eco Route
 
 A sustainability-focused website built using **HTML**, **CSS**, and **Tailwind CSS**.  
 
